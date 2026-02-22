@@ -1,11 +1,22 @@
 
 #include <iostream>
+#include <optional>
 #include <cassert>
+#include <limits>
 #include <cmath>
 
 #define fp64 double
+#define fp64_inf numeric_limits<double>::infinity()
+
+#define fp64_cmp_abs_delta 1e-9L
 
 using namespace std;
+
+
+bool fp64_cmp(fp64 a, fp64 b) {
+    return abs(a - b) < fp64_cmp_abs_delta;
+}
+
 
 struct Point {
     const fp64 x;
@@ -24,10 +35,14 @@ private:
 
 public:
     Line(fp64 a, fp64 b) : a(a), b(b) {}
+
+    /*
+        In case the same point passed as pt1 & pt2, vertical line will be created.
+    */
     Line(Point &pt1, Point &pt2) {
-        if (pt1.x == pt2.x) {
+        if (fp64_cmp(pt1.x, pt2.x)) {
             is_vertical = true;
-            a = INFINITY;
+            a = fp64_inf;
             b = pt1.x;
             return;
         }
@@ -36,12 +51,12 @@ public:
         b = (pt2.y - a*pt2.x);
     }
 
-    Point FindIntersection(Line &other) {
-        if (((is_vertical && other.is_vertical) || (a == other.a)) && (b != other.b)) {
-            return Point(INFINITY, INFINITY);
+    optional<Point> FindIntersection(Line &other) {
+        if (((is_vertical && other.is_vertical) || (fp64_cmp(a, other.a))) && (!fp64_cmp(b, other.b))) {
+            return {};
         }
 
-        if (((is_vertical && other.is_vertical) || (a == other.a)) && (b == other.b)) {
+        if (((is_vertical && other.is_vertical) || (fp64_cmp(a, other.a))) && (fp64_cmp(b, other.b))) {
             return Point(0.0, b);
         }
 
@@ -62,7 +77,7 @@ public:
             return Line(0.0, pt.y);
         }
 
-        if (a == 0) {
+        if (fp64_cmp(a, 0.0)) {
             return Line(pt, pt);
         }
 
@@ -87,8 +102,8 @@ void test_orth_1() {
     Point pt = Point(5.0, 3.0);
     Line orth = ln.FindOrthogonal(pt);
 
-    assert(orth.GetA() == -0.5);
-    assert(orth.GetB() == 5.5);
+    assert(fp64_cmp(orth.GetA(), -0.5));
+    assert(fp64_cmp(orth.GetB(), 5.5));
 }
 
 void test_orth_2() {
@@ -99,8 +114,8 @@ void test_orth_2() {
     Point pt = Point(4.0, 5.1);
     Line orth = ln.FindOrthogonal(pt);
 
-    assert(orth.GetA() == 0.0);
-    assert(orth.GetB() == 5.1);
+    assert(fp64_cmp(orth.GetA(), 0.0));
+    assert(fp64_cmp(orth.GetB(), 5.1));
 }
 
 void test_orth_3() {
@@ -112,27 +127,24 @@ void test_orth_3() {
     Line orth = ln.FindOrthogonal(pt);
 
     assert(orth.IsVertical());
-    assert(orth.GetB() == 3.1415926535);
+    assert(fp64_cmp(orth.GetB(), 3.1415926535));
 }
 
 void test_intersection_1() {
     Line ln1 = Line(2.0, 0.0);
     Line ln2 = Line(2.0, 1.0);
 
-    Point pt1 = ln1.FindIntersection(ln2);
-
-    assert(pt1.x == INFINITY);
-    assert(pt1.y == INFINITY);
+    assert (!ln1.FindIntersection(ln2).has_value());
 }
 
 void test_intersection_2() {
     Line ln1 = Line(0.0, 3.0);
     Line ln2 = Line(0.0, 3.0);
 
-    Point pt1 = ln1.FindIntersection(ln2);
+    Point pt1 = ln1.FindIntersection(ln2).value();
 
-    assert(pt1.x == 0.0);
-    assert(pt1.y == 3.0);
+    assert(fp64_cmp(pt1.x, 0.0));
+    assert(fp64_cmp(pt1.y, 3.0));
 }
 
 void test_intersection_3() {
@@ -143,10 +155,19 @@ void test_intersection_3() {
     Point pt = Point(4.0, 5.1);
     Line orth = ln.FindOrthogonal(pt);
 
-    Point intersect = ln.FindIntersection(orth);
+    Point intersect = ln.FindIntersection(orth).value();
 
-    assert(intersect.x == 4.0);
-    assert(intersect.y == 5.1);
+    assert(fp64_cmp(intersect.x, 4.0));
+    assert(fp64_cmp(intersect.y, 5.1));
+}
+
+void test_numerical_precision() {
+
+    fp64 x = 0.1;
+    fp64 y = 0.2;
+    fp64 sum = x + y;
+
+    assert(fp64_cmp(sum, 0.3));
 }
 
 
@@ -159,6 +180,8 @@ signed main() {
     test_intersection_1();
     test_intersection_2();
     test_intersection_3();
+
+    test_numerical_precision();
 
     return 0;
 }
