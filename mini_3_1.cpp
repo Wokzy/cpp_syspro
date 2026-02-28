@@ -106,9 +106,14 @@ public:
 		}
 	}
 
-	PersistentQueue operator=(const PersistentQueue &other) {
+	PersistentQueue &operator=(const PersistentQueue &other) {
 		cout << "persisnent queue assign\n";
-		return PersistentQueue(other);
+		versions.clear();
+		for (auto ver : other.versions) {
+			versions.push_back(make_shared<VersionInfo>(*ver));
+		}
+
+		return *this;
 	}
 
 	void push(int version, int value) {
@@ -167,7 +172,9 @@ void test_copy() {
 	queue.push(1, 10);
 	queue.push(2, 9999);
 
-	PersistentQueue copied = queue;
+	// PersistentQueue copied = queue;
+	PersistentQueue copied = PersistentQueue{};
+	copied = queue;
 	cout << "-------------- pop from original ---------------\n";
 
 	cout << queue.pop(3) << endl;
