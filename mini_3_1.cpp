@@ -1,252 +1,168 @@
-
+// #include <bits/stdc++.h>
+#include <assert.h>
+#include <utility>
 #include <iostream>
-#include <vector>
 #include <memory>
-#include <stdexcept>
+
 
 using namespace std;
 
+struct Treap {
+	int priority;
+	int sum;
+	int size;
+	int value;
+	shared_ptr<Treap> right;
+	shared_ptr<Treap> left;
 
-class PersistentQueue {
-private:
+	Treap(int p, int val) : sum(val), value(val), priority(p), size(1), right(nullptr), left(nullptr) {}
+	Treap(const Treap &other) : priority(other.priority), sum(other.sum), size(other.size),
+								value(other.value){
 
-	struct Node {
-		shared_ptr<Node> next = nullptr;
-		shared_ptr<Node> element = nullptr;
-
-		int value;
-
-		Node() : next(nullptr), value(0), element(nullptr) {}
-		Node(shared_ptr<Node> next, int value) : next(next), value(value), element(nullptr) {}
-		Node(shared_ptr<Node> next, int value, shared_ptr<Node> element) : next(next), value(value), element(element) {}
-		Node(shared_ptr<Node> next, shared_ptr<Node> element) : next(next), value(0), element(element) {}
-
-		Node(const Node &other) : value(other.value) {
-			// cout << "Copy node\n";
-			if (other.next != nullptr) {
-				next = make_shared<Node>(*other.next);
-			}
-			if (other.element != nullptr) {
-				element = make_shared<Node>(*other.element);
-			}
-		}
-	};
-
-	struct VersionInfo {
-		int size;
-		int ready_list_size = 0;
-		int building_list_size = 0;
-		shared_ptr<Node> head = nullptr;
-		shared_ptr<Node> tail = nullptr;
-		shared_ptr<Node> ready_list = nullptr;
-		shared_ptr<Node> building_list = nullptr;
-
-		VersionInfo(int size, shared_ptr<Node> tail, shared_ptr<Node> head) : size(size), head(head), tail(tail), ready_list(nullptr), building_list(nullptr) {}
-		VersionInfo(int size, shared_ptr<Node> tail, shared_ptr<Node> head, shared_ptr<Node> ready_list, shared_ptr<Node> building_list) : size(size), head(head), tail(tail), ready_list(ready_list), building_list(building_list) {}
-
-		VersionInfo(const VersionInfo &other) : size(other.size),
-												ready_list_size(other.ready_list_size),
-												building_list_size(other.building_list_size) {
-			
-			cout << "version copy\n";
-			if (other.head != nullptr) {
-				head = make_shared<Node>(*other.head);
-			}
-			if (other.tail != nullptr) {
-				tail = make_shared<Node>(*other.tail);
-			}
-			if (other.ready_list != nullptr) {
-				ready_list = make_shared<Node>(*other.ready_list);
-			}
-			if (other.building_list != nullptr) {
-				building_list = make_shared<Node>(*other.building_list);
-			}
+		if (other.right != nullptr) {
+			right = make_shared<Treap>(*other.right);
 		}
 
-		bool _check_ready_list() {
-			if (building_list->element->next == head) {
-				ready_list = building_list;
-				ready_list_size = building_list_size;
-				building_list = nullptr;
-				building_list_size = 0;
-				return true;
-			}
-			return false;
-		}
-
-		void maybe_build_list() {
-
-			if (building_list == nullptr) {
-				if (2 * ready_list_size >= (size - 2)) return;
-
-				building_list = make_shared<Node>(nullptr, 0, tail->next);
-				building_list_size++;
-				_check_ready_list();
-			} else if (!_check_ready_list()) {
-				building_list = make_shared<Node>(building_list, 0, building_list->element->next);
-				building_list_size++;
-			}
-		}
-	};
-
-	vector<shared_ptr<VersionInfo>> versions;
-
-
-public:
-
-	PersistentQueue() : versions(vector<shared_ptr<VersionInfo>>()) {
-		versions.push_back(make_shared<VersionInfo>(0, nullptr, nullptr));
-	}
-
-	PersistentQueue(const PersistentQueue &other) {
-		cout << "creating from other " << versions.size() << '\n';
-		// versions.clear();
-		for (auto ver : other.versions) {
-			versions.push_back(make_shared<VersionInfo>(*ver));
+		if (other.left != nullptr) {
+			left = make_shared<Treap>(*other.left);
 		}
 	}
 
-	PersistentQueue &operator=(const PersistentQueue &other) {
-		cout << "persisnent queue assign\n";
-		versions.clear();
-		for (auto ver : other.versions) {
-			versions.push_back(make_shared<VersionInfo>(*ver));
+	Treap &operator=(const Treap &other) {
+		priority = other.priority;
+		sum = other.sum;
+		size = other.size;
+		value = other.value;
+
+		if (other.right != nullptr) {
+			right = make_shared<Treap>(*other.right);
+		}
+
+		if (other.left != nullptr) {
+			left = make_shared<Treap>(*other.left);
 		}
 
 		return *this;
 	}
-
-	void push(int version, int value) {
-		auto old_ = versions[version];
-
-		auto new_ = make_shared<VersionInfo>(old_->size + 1, make_shared<Node>(old_->tail, value, nullptr), old_->head, old_->ready_list, old_->building_list);
-		if (old_->size == 0) {
-			new_->head = new_->tail;
-		}
-
-		new_->ready_list_size = old_->ready_list_size;
-		new_->building_list_size = old_->building_list_size;
-		new_->maybe_build_list();
-
-		versions.push_back(new_);
-	}
-
-	int front(int version) {
-		auto ver = versions[version];
-		if (ver->size == 0) {
-			throw runtime_error("front for empty queue");
-		}
-
-		return ver->head->value;
-	}
-
-	int pop(int version) {
-		auto old_ = versions[version];
-
-		if (old_->size == 0) {
-			throw runtime_error("Pop for empty queue");
-		} else if (old_->size == 1) {
-			auto new_ = make_shared<VersionInfo>(0, nullptr, nullptr);
-			versions.push_back(new_);
-			return old_->tail->value;
-		} else if (old_->size == 2) {
-			auto new_ = make_shared<VersionInfo>(1, old_->tail, nullptr);
-			versions.push_back(new_);
-			return old_->head->value;
-		}
-
-		auto new_ = make_shared<VersionInfo>(old_->size - 1, old_->tail, old_->ready_list->element, old_->ready_list->next, old_->building_list);
-		new_->ready_list_size = old_->ready_list_size - 1;
-		new_->building_list_size = old_->building_list_size;
-		new_->maybe_build_list();
-
-		versions.push_back(new_);
-		return old_->head->value;
-	}
 };
 
 
-void test_copy() {
-	auto queue = PersistentQueue();
-	queue.push(0, 15);
-	queue.push(1, 10);
-	queue.push(2, 9999);
 
-	// PersistentQueue copied = queue;
-	PersistentQueue copied = PersistentQueue{};
-	copied = queue;
-	cout << "-------------- pop from original ---------------\n";
-
-	cout << queue.pop(3) << endl;
-	cout << queue.pop(4) << endl;
-	cout << queue.pop(5) << endl;
-
-	cout << "-------------- pop from copy ---------------\n";
-	cout << copied.pop(2) << endl;
-	cout << copied.pop(3) << endl;
-	cout << copied.pop(4) << endl;
+void update(shared_ptr<Treap> x) {
+	x->size = 1;
+	x->sum = x->value;
+	if (x->left) {
+		x->size += x->left->size;
+		x->sum += x->left->sum;
+	}
+	if (x->right) {
+		x->size += x->right->size;
+		x->sum += x->right->sum;
+	}
 }
 
 
-signed main() {
+shared_ptr<Treap> merge(shared_ptr<Treap> x, shared_ptr<Treap> y) {
+	if (x == nullptr) return y;
+	if (y == nullptr) return x;
 
-	test_copy();
+	if (x->priority < y->priority) {
+		x->right = merge(x->right, y);
+		update(x->right);
+		update(x);
+		return x;
+	}
+
+	y->left = merge(x, y->left);
+	update(y->left);
+	update(y);
+	return y;
+}
+
+
+pair<shared_ptr<Treap> , shared_ptr<Treap> > splitBySize(shared_ptr<Treap> x, int k) {
+	if (x == nullptr) return {nullptr, nullptr};
+
+	int l_size = 0;
+	if (x->left) l_size = x->left->size;
+
+	if (k <= l_size) {
+		auto ll_lr = splitBySize(x->left, k);
+		x->left = ll_lr.second;
+		update(x);
+		return {ll_lr.first, x};
+	}
+
+	auto rl_rr = splitBySize(x->right, k - l_size - 1);
+	x->right = rl_rr.first;
+	update(x);
+	return {x, rl_rr.second};
+}
+
+
+shared_ptr<Treap> insert(shared_ptr<Treap> x, int pos, int value) {
+	auto l_r = splitBySize(x, pos - 1);
+	auto y = make_shared<Treap>(rand(), value);
+	return merge(merge(l_r.first, y), l_r.second);
+}
+
+shared_ptr<Treap> erase(shared_ptr<Treap> x, int pos, int count) {
+	auto l_r = splitBySize(x, pos - 1);
+	auto rl_rr = splitBySize(l_r.second, count);
+
+	return merge(l_r.first, rl_rr.second);
+}
+
+int sum(shared_ptr<Treap> x, int lq, int rq) {
+	auto l_r = splitBySize(x, lq - 1);
+	auto rl_rr = splitBySize(l_r.second, rq - lq + 1);
+
+	int res = 0;
+	if (rl_rr.first != nullptr) {
+		res = rl_rr.first->sum;
+	}
+
+	merge(l_r.first, merge(rl_rr.first, rl_rr.second));
+	return res;
+}
+
+
+void test_output(shared_ptr<Treap> treap) {
+	assert(sum(treap, 1, 1) == 1);
+	assert(sum(treap, 1, 10) == 75);
+	assert(sum(treap, 3, 4) == 35);
+	assert(sum(treap, 100, 230) == 0);
+	assert(sum(treap, 4, 4) == 25);
+
+
+	treap = erase(treap, 3, 2);
+	// {1, 14, 25};
+	assert(sum(treap, 1, 10) == 40);
+	assert(sum(treap, 2, 2) == 14);
+}
+
+
+int main(void) {
+
+	srand((unsigned)time(0));
+
+	auto test = insert(nullptr, 1, 1);
+	test = insert(test, 2, 14);
+	test = insert(test, 3, 25);
+	test = insert(test, 4, 25);
+	test = insert(test, 3, 10);
+
+	shared_ptr<Treap> copy = make_shared<Treap>(*test);
+	shared_ptr<Treap> test_operator = insert(nullptr, 1, 1);
+	*test_operator = *test;
+
+	// {1, 14, 10, 25, 25}
+
+
+	test_output(test);
+	test_output(test_operator);
+	test_output(copy);
+
 
 	return 0;
-
-	// auto queue = PersistentQueue();
-	// queue.push(0, 15);
-	// queue.push(1, 10);
-	// queue.push(2, 25);
-	// queue.push(3, 30);
-	// queue.push(4, 45);
-	// // queue.push(5, 50);
-	// queue.push(2, 4); // -> 6
-	// queue.push(6, 7); // -> 7
-	// queue.push(6, -3); // -> 8
-	// queue.push(7, 2); // -> 9
-	// queue.push(9, 10); // -> 10
-
-	// // cout << queue.pop(6) << '\n';
-	// // cout << queue.pop(7) << '\n';
-	// // cout << queue.pop(8) << '\n';
-	// // cout << queue.pop(9) << '\n';
-	// // cout << queue.pop(10) << '\n';
-
-	// PersistentQueue copied = queue;
-
-	// cout << "-------------- pop from original ---------------\n";
-
-	// cout << queue.pop(10) << '\n';
-	// cout << queue.pop(11) << '\n';
-	// cout << queue.pop(12) << '\n';
-	// cout << queue.pop(13) << '\n';
-	// cout << queue.pop(14) << '\n';
-	// cout << queue.pop(15) << '\n';
-	// // cout << queue.pop(16) << '\n';
-
-	// // cout << "----------------------\n";
-
-	// cout << queue.pop(8) << '\n';
-	// cout << queue.pop(17) << '\n';
-	// cout << queue.pop(18) << '\n';
-	// cout << queue.pop(19) << '\n';
-
-	// cout << "-------------- pop from copy ---------------\n";
-
-	// cout << copied.pop(10) << '\n';
-	// cout << copied.pop(11) << '\n';
-	// cout << copied.pop(12) << '\n';
-	// cout << copied.pop(13) << '\n';
-	// cout << copied.pop(14) << '\n';
-	// cout << copied.pop(15) << '\n';
-
-	// cout << copied.pop(8) << '\n';
-	// cout << copied.pop(17) << '\n';
-	// cout << copied.pop(18) << '\n';
-	// cout << copied.pop(19) << '\n';
-
-
-	// return 0;
 }
-
