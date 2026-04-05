@@ -17,7 +17,7 @@ struct Treap {
 
 	Treap(int p, int val) : sum(val), value(val), priority(p), size(1), right(nullptr), left(nullptr) {}
 	Treap(const Treap &other) : priority(other.priority), sum(other.sum), size(other.size),
-								value(other.value){
+								value(other.value), right(other.right), left(other.left) {
 
 		if (other.right != nullptr) {
 			right = make_shared<Treap>(*other.right);
@@ -44,22 +44,21 @@ struct Treap {
 
 		return *this;
 	}
+
+	void update() {
+		size = 1;
+		sum = value;
+		if (left) {
+			size += left->size;
+			sum += left->sum;
+		}
+		if (right) {
+			size += right->size;
+			sum += right->sum;
+		}
+	}
 };
 
-
-
-void update(shared_ptr<Treap> x) {
-	x->size = 1;
-	x->sum = x->value;
-	if (x->left) {
-		x->size += x->left->size;
-		x->sum += x->left->sum;
-	}
-	if (x->right) {
-		x->size += x->right->size;
-		x->sum += x->right->sum;
-	}
-}
 
 
 shared_ptr<Treap> merge(shared_ptr<Treap> x, shared_ptr<Treap> y) {
@@ -68,19 +67,19 @@ shared_ptr<Treap> merge(shared_ptr<Treap> x, shared_ptr<Treap> y) {
 
 	if (x->priority < y->priority) {
 		x->right = merge(x->right, y);
-		update(x->right);
-		update(x);
+		x->right->update();
+		x->update();
 		return x;
 	}
 
 	y->left = merge(x, y->left);
-	update(y->left);
-	update(y);
+	y->left->update();
+	y->update();
 	return y;
 }
 
 
-pair<shared_ptr<Treap> , shared_ptr<Treap> > splitBySize(shared_ptr<Treap> x, int k) {
+pair<shared_ptr<Treap>, shared_ptr<Treap>> splitBySize(shared_ptr<Treap> x, int k) {
 	if (x == nullptr) return {nullptr, nullptr};
 
 	int l_size = 0;
@@ -89,13 +88,13 @@ pair<shared_ptr<Treap> , shared_ptr<Treap> > splitBySize(shared_ptr<Treap> x, in
 	if (k <= l_size) {
 		auto ll_lr = splitBySize(x->left, k);
 		x->left = ll_lr.second;
-		update(x);
+		x->update();
 		return {ll_lr.first, x};
 	}
 
 	auto rl_rr = splitBySize(x->right, k - l_size - 1);
 	x->right = rl_rr.first;
-	update(x);
+	x->update();
 	return {x, rl_rr.second};
 }
 
