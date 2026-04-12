@@ -12,11 +12,15 @@ mini_4 : mini_4.cpp
 mini_6 : mini_6.cpp
 	$(CXX) -O0 -g -fsanitize=address $^
 
+mini_8 : mini_8.cpp
+	$(CXX) -O0 -g -fsanitize=address $^
+
 mini_9 : mini_9.cpp
 	$(CXX) -O0 -g -fsanitize=address $^
 
 mini_10 : mini_10.cpp
 	$(CXX) -O0 -g -fsanitize=address $^
+
 
 mini_11 : mini_11.cpp
 	$(CXX) -O0 -g -fsanitize=address $^
