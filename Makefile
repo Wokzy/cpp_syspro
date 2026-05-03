@@ -26,3 +26,6 @@ mini_11 : mini_11.cpp
 
 mini_12 : mini_12.cpp
 	$(CXX) -O0 -g -fsanitize=address $^
+
+mini_13 : mini_13.cpp
+	$(CXX) -O2 -fsanitize=address $^
