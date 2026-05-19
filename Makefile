@@ -35,3 +35,6 @@ mini_16 : mini_16.cpp
 
 mini_17 : mini_17.cpp
 	$(CXX) -std=c++20 -O2 -fsanitize=address $^
+
+mini_18 : mini_18.cpp
+	$(CXX) -std=c++20 -O0 -g -fsanitize=address,undefined $^
