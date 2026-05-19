@@ -441,17 +441,25 @@ int main(void) {
 
 	my_swap(test, test_moved);
 
-	my_shared_ptr<int[]> some_arr = new int[8];
-
-
-	std::jthread thread1(consumer, some_arr, 8);
-	std::jthread thread2(producer, some_arr, 8, 25);
-
 	// {1, 14, 10, 25, 25}
-
 
 	test_1(test_moved);
 	test_2(test);
+
+
+	my_shared_ptr<int[]> some_arr = new int[8];
+
+	std::thread thread1(consumer, some_arr, 8);
+	std::thread thread2(producer, some_arr, 8, 25);
+
+	thread1.join();
+	thread2.join();
+
+	cout << "main thread has [ ";
+	for (int i = 0; i < 8; ++i) {
+		cout << some_arr[i] << " ";
+	}
+	cout << "]\n";
 
 	return 0;
 }
