@@ -4,6 +4,8 @@
 #include <stdexcept>
 #include <assert.h>
 
+// #define DEBUG
+
 template <typename T>
 class my_shared_ptr {
 private:
@@ -50,7 +52,7 @@ private:
 			++ref_counter;
 
 			#ifdef DEBUG
-			cout << "ref counter changed to " << ref_counter << endl;
+			std::cout << "ref counter changed to " << ref_counter << std::endl;
 			#endif
 		}
 
@@ -61,7 +63,7 @@ private:
 			--ref_counter;
 
 			#ifdef DEBUG
-			cout << "ref counter changed to " << ref_counter << endl;
+			std::cout << "ref counter changed to " << ref_counter << std::endl;
 			#endif
 
 			return (ref_counter == 0);
